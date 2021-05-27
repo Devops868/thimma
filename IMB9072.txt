@@ -1,7 +1,7 @@
 000010 IDENTIFICATION DIVISION.
 000020 PROGRAM-ID.    IMB9072.
 000030*
-000040 COPY IMCINFRN.
+000040 *COPY IMCINFRN.
 000050*
 000060******************************************************************
 000070*   GROUP LIST BILL - RESET/REBILL PROGRAM                       *
