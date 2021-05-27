@@ -1,0 +1,10 @@
+E00578********** IMCSOPRT select statements for PC 
+000020*----------------------------------------------------------------         
+000030*   COPY LIBRARY NAME IS "IMCSOPRT" --- PRINT FILE PRINT01                
+000040*----------------------------------------------------------------         
+E00578       SELECT  O-PRT-PRINT-FILE ASSIGN EXTERNAL UT-S-PRINT01              
+E00578                                ORGANIZATION IS LINE SEQUENTIAL.
+ 
+
+000090     
+000100   

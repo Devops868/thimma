@@ -1,0 +1,236 @@
+rem -------------------------------------------------------
+rem -------------------------------------------------------
+rem        JOB PQSD1W96Z
+rem -------------------------------------------------------
+rem -------------------------------------------------------
+
+rem -------------------------------------------------------
+rem --> Job Initialization Step 
+rem -------------------------------------------------------
+
+:job_start
+  set Inspro_job=W96Z
+
+rem --> set common batch environment job variables
+  call %~dp0batch_environment_variables.bat 
+
+rem --> set batch job parm variables  
+  call %bat_variables%batch_environment_w96_variables.bat 
+
+  call %bat_variables%batch_environment_w96a_variables.bat 
+
+rem --> set batch job parm variables  
+  call %bat_variables%batch_environment_audit_variables.bat 
+
+
+rem --> set batch job parm variables  
+  call %bat_variables%batch_environment_m60_variables.bat 
+
+rem --> set batch job parm variables for run3406 below
+  call %bat_variables%batch_environment_w96_variables.bat 
+
+rem --> set batch job parm variables for search claims update
+  call %bat_variables%sql_parms_search_load.bat 
+  
+
+rem --> delete set file before Job execution
+  if exist %0set.bat erase %0set.bat
+
+rem --> only set variable for restarts (ex: restart=goto qsd10060)
+  %Ins_job_restart%
+
+
+rem ------------------------------------------------------------------
+rem --> Step 01 - asa runs daily - all others run in M60
+rem             - lfp runs daily - all others run in M60 - 11/15/2011
+rem ------------------------------------------------------------------
+:qsd10001
+
+
+   if %inspro_base_pgm_id% equ asa   goto qsd10001_continue
+   if %inspro_base_pgm_id% equ lfp   goto qsd10001_continue
+
+
+    goto qsd10010
+
+
+:qsd10001_continue
+
+  set Inspro_step=qsd10001
+
+  call %bat_file_path%run9086.bat
+
+  if %Ins_job_return% gtr 0 goto Step_failed
+
+
+rem -----------------------------------------------------------------------
+rem --> Step    Execute IMB441A - Rptg DB Audit Files 1
+rem -----------------------------------------------------------------------
+:qsd10010
+
+
+  if %inspro_base_pgm_id% equ gnw  goto qsd10050
+
+
+  set Inspro_step=qsd10010
+
+  call %bat_file_path%run441A.bat
+
+  if %Ins_job_return% gtr 0 goto Step_failed
+
+
+rem -----------------------------------------------------------------------
+rem --> Step #2  Execute IMB441B - Rptg DB Audit Files 2
+rem -----------------------------------------------------------------------
+:qsd10020
+
+  set Inspro_step=qsd10020
+
+  call %bat_file_path%run441B.bat
+
+  if %Ins_job_return% gtr 0 goto Step_failed
+
+
+rem -----------------------------------------------------------------------
+rem --> Step #3 Execute IMB441C - Rptg DB Audit Files 3
+rem -----------------------------------------------------------------------
+:qsd10030
+
+  set Inspro_step=qsd10030
+
+  call %bat_file_path%run441C.bat
+
+  if %Ins_job_return% gtr 0 goto Step_failed
+
+
+rem -----------------------------------------------------------------------
+rem --> Step #4 Execute IMB441D - Rptg DB Audit Files 4
+rem -----------------------------------------------------------------------
+:qsd10040
+
+  set Inspro_step=qsd10040
+
+  call %bat_file_path%run441D.bat
+
+  if %Ins_job_return% gtr 0 goto Step_failed
+
+rem ---------------------------------------------
+rem --> Next 4 steps added from offload_lbh_lbr
+rem --------------------------------------------- 
+
+rem ---------------------------------------------
+rem -->  Step qsd10050: offload coverages
+rem --------------------------------------------- 
+:qsd10050
+  set inspro_step=qsd10050
+
+  call %bat_file_path%run0135.bat 
+
+  if  %Ins_job_return% gtr 0 goto Step_failed
+
+rem ---------------------------------------------
+rem -->  Step qsd10060: load searchCov table
+rem --------------------------------------------- 
+:qsd10060
+  set inspro_step=qsd10060
+
+  @echo about to call %bat_file_path%run_upl_coverages.bat
+  call %bat_file_path%run_upl_coverages.bat
+
+  set Ins_job_return=%errorlevel%  
+  @echo  return code = %Ins_job_return% 
+  if  %Ins_job_return% gtr 0 goto Step_Failed
+
+rem -----------------------------------------------------
+rem -->  Step qsd10070: offload Search Master claims data
+rem ----------------------------------------------------- 
+:qsd10070
+  set inspro_step=qsd10070
+
+  call %bat_file_path%run3406.bat 
+
+  if  %Ins_job_return% gtr 0 goto Step_Failed
+
+rem -----------------------------------------------------
+rem -->  Step qsd10080: update Search Master data
+rem ----------------------------------------------------- 
+:qsd10080
+  set inspro_step=qsd10080
+
+  call %bat_file_path%run_upl_searchmaster_update.bat 
+
+  if  %Ins_job_return% gtr 0 goto Step_Failed
+
+rem -------------------------------------------------------
+rem --> Step qsd10090 Create next MKTCNTL record in imb3070 gdg
+rem -------------------------------------------------------
+:qsd10090
+
+  set Inspro_step=qsd10090
+
+  call %bat_file_path%run3069.bat
+
+  if %Ins_job_return% gtr 0 goto Step_failed
+
+
+
+
+rem -----------------------------------------------------------
+rem --> Job Clean Step 
+rem -----------------------------------------------------------
+:jobend
+
+    set Inspro_step=jobend
+
+  goto job_exit
+
+rem ------------------------------------------------------------
+rem --> Sub-routines
+rem ------------------------------------------------------------
+
+:SETERR
+  set Ins_job_return=%errorlevel%
+  @echo EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+  @echo  set error for sort = %Ins_job_return% 
+  @echo EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+  goto job_exit
+
+:Step_failed
+  @echo EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+  @echo  %Inspro_step% failed return code = %Ins_job_return%
+  @echo EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+  goto job_exit
+
+
+:job_exit
+
+rem --------------------------------------------------------
+rem --> job_exit bat file
+rem --------------------------------------------------------
+
+  @echo ::::::::::::::::::::::::::::::::::::::::::::::::::::
+  @echo :
+  @echo :  Job PQSD1W96Z Completed return code = %Ins_job_return% 
+  @echo :
+  @echo ::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+rem --> re-set common batch environment job variables
+   call  %bat_variables%reset_batch_environment_variables.bat
+ 
+   if %Ins_job_return% equ 0 goto return_code
+ 
+ @echo *********************************************************
+ @echo * if return code above is 128, it will be reset to be 16
+ @echo * so ARGENT will recognize it as valid; otherwise it
+ @echo * will be left as is.
+ @echo *********************************************************
+ 
+   if %Ins_job_return% equ 128 set Ins_job_return=16
+ 
+:return_code
+ 
+  exit /b %ins_job_return%
+     
+rem --------------------------------------------------------
+rem --> end of Job PQSD1W96Z
+rem --------------------------------------------------------

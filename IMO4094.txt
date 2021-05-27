@@ -1,0 +1,1312 @@
+000100 ID DIVISION.                                                             
+000200 PROGRAM-ID.  IMO4094.                                                    
+000300*                                                                         
+000400 COPY  IMCINFRN.
+000500*                                                                         
+000600******************************************************************        
+000700*     INSPRO       ON-LINE PROGRAM: IMO4094                      *        
+000800*                                                                *        
+000900*     DESCRIPTION: INFLATION CHANGE RULE  (RTG_017)              *        
+001000*                                                                *        
+001100******************************************************************        
+001200*                                                                *
+001300*            -  VIEW   ICR REQUEST / RESPONSE                    *
+001400*            -  CREATE ICR REQUEST / RESPONSE                    *
+001500*            -  MODIFY ICR REQUEST / RESPONSE                    *
+001600*            -  DELETE ICR REQUEST / RESPONSE                    *
+001700*                                                                *
+001800******************************************************************
+001900
+002000                                                                          
+002100******************************************************************        
+002200*                    C H A N G E   L O G                         *        
+002300******************************************************************        
+002400*                                                                *        
+002500*  LOG #   DATE     NAME        REASON                           *        
+002600*  ------- -------  ---------- --------------------------------  * 
+W08215*  ADIXIT  05/12/20  AAYUSHI   ADDIND STATE & PARTNERSHIP CODE   * 
+W08215*                                                                *
+W08215*  W08215  05/23/18  VENKATESH  MOD463 Increase LMY from         * 
+W08215*                               2 to 3 bytes in ICR rule.        *
+002700*                                                                *        
+002800*  E01485 02/06/18  SVAID     NEW PROGRAM-INFLATION CHANGE RULE  *
+002900*                                                                *        
+003000******************************************************************        
+003100******************************************************************        
+003200     EJECT                                                                
+003300 ENVIRONMENT DIVISION.                                                    
+003400 CONFIGURATION SECTION.                                                   
+003500 INPUT-OUTPUT SECTION.                                                    
+003600                                                                         
+003700 DATA DIVISION.                                                           
+003800                                                                          
+003900 WORKING-STORAGE SECTION.                                                 
+004000******************************************************************        
+004100                                                                          
+004200 COPY   XMLDCOMM.                                                         
+004300                                                                          
+004400 COPY   IMCDCCR.
+004500                                                                          
+004600 COPY   CACSCPRC.                                                         
+004700 COPY   CACSCATT.                                                         
+004800 COPY   CACSC010.                                                         
+004900                                                                          
+005000 COPY   IMCDEBUG.                                                         
+005100 COPY   IMCDEDIT.                                                         
+005200 COPY   IMCDETXT.                                                         
+005300 COPY   IMCDTBL.                                                          
+005400 COPY   IMCDDBIO.                                                         
+005500 COPY   IMCDDATE.                                                         
+005600                                                                          
+005700 COPY   IMCCCRDA.                                                        
+005800 COPY   IMCSCRDA.                                                        
+005900                                                                          
+006000 COPY   IMCICRDA.
+006100                                                                          
+006200    EJECT
+006300 01  WS-MISC-ELEMENTS.
+006400
+006500     05  WS-SUB                     PIC 9(04) VALUE ZEROES.
+006600     05  WS-IDENTIFIER         PIC X(04) VALUE SPACES.
+006700     05  WS-STATE                   PIC X(02) VALUE SPACES.
+006800
+006900 01  WS-XML-TAGS-FIELDS.
+007000   03  WS-ICR-DATA.
+007100     05  WS-ICR-052-IDENTIFIER        PIC X(04) VALUE SPACES.             
+007200     05  WS-ICR-053-STATE             PIC X(02) VALUE SPACES.             
+007300     05  WS-ICR-060-DESCRIPTION       PIC X(30) VALUE SPACES.             
+007400     05  WS-ICR-070-ELIG-DAYS         PIC 9(03) VALUE ZEROES.             
+007500     05  WS-ICR-080-NO-OF-RULES       PIC 9(02) VALUE ZEROES.
+THIMMA     05  WS-PRT-300-PAID-UP-OPTION-RULE    PIC 9(02) VALUE ZEROES.
+007600
+007700 01  WS-ICR-TABLE.
+007800     05  WS-ICR-210-INFL-CHANGE-RULE   OCCURS 20 TIMES.
+007900         10  WS-ICR-220-OPTION-CODE   PIC X(03)   VALUE SPACES.
+008000         10  WS-ICR-230-SOURCE-INFL-OPTN   PIC X(01).
+008100             88 WS-ICR-230-SRC-COMPUND      VALUE 'C'.
+008200             88 WS-ICR-230-SRC-SIMPLE       VALUE 'S'.
+008300         10  WS-ICR-240-SOURCE-PCT      PIC 9(2)V99 VALUE ZEROS.
+W08215*         10  WS-ICR-250-SOURCE-LTM-MAX-YRS PIC X(02) VALUE SPACES.
+W08215         10  WS-ICR-250-SOURCE-LTM-MAX-YRS PIC X(03) VALUE SPACES.
+008500         10  WS-ICR-LTM-SRC       REDEFINES
+W08215*             WS-ICR-250-SOURCE-LTM-MAX-YRS PIC 9(02).
+W08215             WS-ICR-250-SOURCE-LTM-MAX-YRS PIC 9(03).
+008700         10  WS-ICR-260-TARGET-INFL-OPTN   PIC X(01).
+008800             88 WS-ICR-260-TGT-COMPUND      VALUE 'C'.
+008900             88 WS-ICR-260-TGT-SIMPLE       VALUE 'S'.
+009000         10  WS-ICR-270-TARGET-PCT    PIC 9(2)V99 VALUE ZEROS.
+W08215*         10  WS-ICR-280-TARGET-LTM-MAX-YRS PIC X(02) VALUE SPACES.
+W08215         10  WS-ICR-280-TARGET-LTM-MAX-YRS PIC X(03) VALUE SPACES.
+009200         10  WS-ICR-LTM-TRGT        REDEFINES
+W08215*             WS-ICR-280-TARGET-LTM-MAX-YRS PIC 9(02).
+W08215             WS-ICR-280-TARGET-LTM-MAX-YRS PIC 9(03). 
+       
+THIMMA 01  WS-PDUP-TABLE.
+THIMMA     05  WS-IOR-300-PAID-UP-OPTIONS        OCCURS 50 TIMES.
+THIMMA         10  WS-IOR-310-PAID-STATE        PIC X(02) VALUE SPACES.
+THIMMA         10  WS-IOR-320-PAY-UP-CODE       PIC X(10) VALUE SPACES.
+               10  WS-IOR-330-PAY-UP-AGE-OR-DUR PIC 9(003) VALUE SPACES.  
+009400
+009500 01  WS-ICR-ACTION-TABLE                 OCCURS 20 TIMES.
+009600     05  WS-ICR-ROWID              PIC 9(3)    VALUE ZEROS.
+009700 01  WS-I                          PIC 99.
+009800 01  WS-J                          PIC 99.
+009900 01  WS-K                          PIC 99.
+W08215* 01  WS-TEMP                       PIC X(17).
+W08215 01  WS-TEMP                       PIC X(19).
+
+ADIXIT 01  WS-PRT-ACTION-TABLE                 OCCURS 20 TIMES.
+ADIXIT     05  WS-PRT-ROWID              PIC 9(3)    VALUE ZEROS.
+ADIXIT 01  WS-TEMP1                      PIC X(19).
+010100
+010200 01  WS-COUNTERS.
+010300     05  WS-SUB-TEMP                  PIC 9(3) VALUE ZEROES.
+010400     05  ICRSUB                       PIC 9(2) VALUE ZEROES.
+010500     05  WS-ICRSUB                    PIC 9(2) VALUE ZEROES.
+010600     05  WS-ICR-NUM-ENTRIES           PIC 9(3) VALUE ZEROES.
+ADIXIT     05  PRTSUB                       PIC 9(2) VALUE ZEROES.
+ADIXIT     05  WS-PRTSUB                    PIC 9(2) VALUE ZEROES.
+ADIXIT     05  WS-PRT-NUM-ENTRIES           PIC 9(3) VALUE ZEROES.
+010700
+010800
+010900     EJECT                                                                
+011000                                                                          
+011100 01  WS-COMMAREA.
+011200 COPY   CACSC001     .
+011300 COPY   IMCDCOMM     .
+011400   02  LS-WORK-AREA    REDEFINES IM-PROG-SAVE-DATA.
+011500     05  FILLER                           PIC X(01).                   
+011600
+011700     EJECT
+011800
+011900 LINKAGE SECTION.
+012000**************************************************************    
+012100
+012200 01  DFHCOMMAREA.
+012300     05  MESSAGE-AREA            PIC X(32760).
+012400
+012500 COPY   IMCLNKIO.
+012600
+012700     EJECT
+012800
+012900
+013000 PROCEDURE DIVISION.
+013100**************************************************************
+013200
+013300 0000-PROGRAM-CONTROL SECTION.
+013400
+013500     PERFORM 0000-INIT-N-DO-REQUEST
+013600
+013700     MOVE INSPRO-LINKAGE-AREA       TO MESSAGE-AREA
+013800
+013900     PERFORM 9999-RETURN
+014000     .
+014100
+014200 SECTION-EXIT.
+014300     EXIT.
+014400
+014500 0000-INIT-N-DO-REQUEST  SECTION.
+014600
+014700     PERFORM IO-GETMAIN-IOAREA
+014800
+014900     MOVE MESSAGE-AREA      TO INSPRO-LINKAGE-AREA
+015000
+015100     INSPECT INSPRO-AREA
+015200     REPLACING ALL '<reqData>' BY '<rspData>'
+015300
+015400     INSPECT INSPRO-AREA
+015500     REPLACING ALL '</reqData>' BY '</rspData>'
+015600
+015700     MOVE '0'    TO XMLE-ERR-CHAR
+015800     MOVE 'N'    TO XML-PASS-BACK-INPUT
+015900     MOVE SPACES TO WS-ICR-TABLE
+ADIXIT     MOVE SPACES TO WS-PRT-TABLE
+016000
+016100     PERFORM IMCPSCR-READ-SCR
+016200
+016300     IF XMLE-ERROR
+016400         MOVE 'E'       TO XMLE-ERR-CHAR
+016500         MOVE '9008'    TO XMLE-ERR-CODE
+016600         PERFORM XML-FINISH-UP
+016700         GO TO SECTION-EXIT
+016800     .
+016900
+017000     PERFORM XML-FILL-FUNCTION-CODE
+017100
+017200     PERFORM 1000-FILL-COBOL-KEY-DATA
+017300     VARYING DATA-SUB FROM 50 BY 1
+017400       UNTIL DATA-SUB > 32746
+017500          OR INSPRO-AREA (DATA-SUB:10) = '</keyData>'
+017600
+017700     PERFORM CCR-FILL-CCR-TABLE  
+017800
+017900     IF XML-ACTION-NEW
+018000         NEXT SENTENCE
+018100     ELSE
+018200         PERFORM 7500-READ-ICR
+018300     .
+018400
+018500     IF XMLE-ERROR
+018600         MOVE 'N'  TO XML-PASS-BACK-INPUT
+018700         GO TO SECTION-EXIT
+018800     .
+018900
+019000     IF XML-ACTION-INQ
+019100         PERFORM 0003-INQ-008-INQ
+019200         MOVE 'Y'  TO XML-PASS-BACK-INPUT
+019300     ELSE
+019400     IF XML-ACTION-NEW
+019500         PERFORM 0004-INQ-008-NEW
+019600     ELSE
+019700     IF XML-ACTION-CHG
+019800         PERFORM 0005-INQ-008-CHG
+019900     ELSE
+020000     IF XML-ACTION-DEL
+020100         PERFORM 0006-INQ-008-DEL
+020200     .
+020300
+020400     IF XMLE-ERROR
+020500         MOVE 'N'  TO XML-PASS-BACK-INPUT
+020600         GO TO SECTION-EXIT
+020700     .
+020800
+020900     PERFORM XML-FINISH-UP
+021000     .
+021100
+021200 SECTION-EXIT.
+021300     EXIT.
+021400     EJECT
+
+021500 0003-INQ-008-INQ        SECTION.
+021600
+021700     MOVE W-ICR-010-LOG-DATE
+021800       TO INSPRO-START-DATE
+021900
+022000     MOVE W-ICR-020-LOG-TIME
+022100       TO INSPRO-START-TIME
+022200
+022300     PERFORM XML-SET-DATE-TIME-STAMP
+022400
+022500     PERFORM XML-RSP-DOCUMENT-START
+022600
+022700     MOVE W-ICR-052-IDENTIFIER
+022800       TO WS-WRK-FLD-AREA
+022900     MOVE 'A'                   TO WS-HLD-CNTL-OUTPUT-TYPE
+023000     MOVE '<identifier>'
+023100       TO WS-HLD-CNTL-BEGIN-XML-TAG
+023200          WS-HLD-CNTL-END-XML-TAG
+023300     PERFORM XML-FORMAT-RESPONSE-XML
+023400
+023500     MOVE W-ICR-053-STATE
+023600       TO WS-WRK-FLD-AREA
+023700     MOVE 'A'                   TO WS-HLD-CNTL-OUTPUT-TYPE
+023800     MOVE '<state tbl="STATE-CODE">'
+023900       TO WS-HLD-CNTL-BEGIN-XML-TAG
+024000     MOVE '</state>' TO      WS-HLD-CNTL-END-XML-TAG
+024100     PERFORM XML-FORMAT-RESPONSE-XML
+024200
+024300     MOVE W-ICR-060-DESCRIPTION
+024400       TO WS-WRK-FLD-AREA
+024500     MOVE 'A'                   TO WS-HLD-CNTL-OUTPUT-TYPE
+024600     MOVE '<desc>'
+024700       TO WS-HLD-CNTL-BEGIN-XML-TAG
+024800          WS-HLD-CNTL-END-XML-TAG
+024900     PERFORM XML-FORMAT-RESPONSE-XML
+025000
+025100     MOVE W-ICR-070-ELIG-DAYS                                             
+025200       TO WS-NUMBER
+025300     MOVE WS-NUMBER-C  TO WS-WRK-FLD-AREA
+025400     PERFORM 0019-MOVE-INTEGER
+025500     MOVE '<eligdays>'                                                    
+025600       TO WS-HLD-CNTL-BEGIN-XML-TAG
+025700          WS-HLD-CNTL-END-XML-TAG
+025800     PERFORM XML-FORMAT-RESPONSE-XML
+025900
+026000
+026100     IF W-ICR-080-NO-OF-RULES NOT NUMERIC
+026200        MOVE ZEROS
+026300           TO W-ICR-080-NO-OF-RULES
+026400     ELSE
+026500        PERFORM 0003-ICR-ROWS-INQ
+026600     END-IF
+ADIXIT
+ADIXIT     IF W-ICR-300-NO-OF-PRT-RULE NOT NUMERIC
+ADIXIT        MOVE ZEROS
+ADIXIT           TO W-ICR-300-NO-OF-PRT-RULE
+ADIXIT     ELSE
+ADIXIT        PERFORM 0004-PRT-ROWS-INQ
+ADIXIT     END-IF
+026800     .
+026900
+027000 SECTION-EXIT.
+027100     EXIT.
+027200     EJECT
+ADIXIT
+ADIXIT 0004-PRT-ROWS-INQ        SECTION.
+ADIXIT
+ADIXIT     MOVE SPACES              TO WS-WRK-FLD-AREA
+ADIXIT     MOVE 'T'                 TO WS-HLD-CNTL-OUTPUT-TYPE
+ADIXIT     MOVE '<ptrnRows>'         TO WS-HLD-CNTL-BEGIN-XML-TAG
+ADIXIT     MOVE SPACES              TO WS-HLD-CNTL-END-XML-TAG
+ADIXIT     
+ADIXIT     PERFORM XML-FORMAT-RESPONSE-XML
+ADIXIT          .
+ADIXIT     MOVE ZEROS               TO PRTSUB
+ADIXIT
+ADIXIT     PERFORM 0004-PRT-RULE-ROWS
+ADIXIT        VARYING PRTSUB FROM 1 BY 1
+ADIXIT          UNTIL PRTSUB > 50
+ADIXIT           OR PRTSUB > WS-PRT-NUM-ENTRIES
+ADIXIT          .
+ADIXIT     MOVE SPACES              TO WS-WRK-FLD-AREA
+ADIXIT     MOVE 'T'                 TO WS-HLD-CNTL-OUTPUT-TYPE
+ADIXIT     MOVE '</ptrnRows>'        TO WS-HLD-CNTL-BEGIN-XML-TAG
+ADIXIT     MOVE SPACES              TO WS-HLD-CNTL-END-XML-TAG
+ADIXIT     
+ADIXIT     PERFORM XML-FORMAT-RESPONSE-XML
+ADIXIT         .
+ADIXIT SECTION-EXIT.
+ADIXIT     EXIT.
+
+ADIXIT 0004-PRT-RULE-ROWS                    SECTION.
+ADIXIT 
+ADIXIT     MOVE 11                    TO WS-HLD-CNTL-FIELD-LENGTH
+ADIXIT     MOVE 'T'                   TO WS-HLD-CNTL-OUTPUT-TYPE
+ADIXIT     MOVE 'Y'                   TO WS-HLD-CNTL-SEND-IF-NULL
+ADIXIT     MOVE '<ptrnRow>'         TO WS-HLD-CNTL-BEGIN-XML-TAG
+ADIXIT     MOVE SPACES                TO WS-HLD-CNTL-END-XML-TAG
+ADIXIT                                   WS-WRK-FLD-AREA
+ADIXIT 
+ADIXIT     PERFORM XML-FORMAT-RESPONSE-XML
+ADIXIT     .
+ADIXIT
+ADIXIT     MOVE WS-PRT-320-STATE-CODE (PRTSUB)
+ADIXIT       TO WS-WRK-FLD-AREA                                                 
+ADIXIT     MOVE 'A'     TO WS-HLD-CNTL-OUTPUT-TYPE                              
+ADIXIT     MOVE '<ptrnState>'
+ADIXIT       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+ADIXIT     MOVE '</ptrnState>'
+ADIXIT       TO WS-HLD-CNTL-END-XML-TAG                                         
+ADIXIT     PERFORM XML-FORMAT-RESPONSE-XML    
+ADIXIT      .
+ADIXIT     MOVE WS-PRT-330-PRTSHIP (PRTSUB)                            
+ADIXIT       TO WS-WRK-FLD-AREA                                                 
+ADIXIT     MOVE 'A'     TO WS-HLD-CNTL-OUTPUT-TYPE                              
+ADIXIT     MOVE '<ptrnCode>'                                         
+ADIXIT             
+ADIXIT       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+ADIXIT     MOVE '</ptrnCode>'                                        
+ADIXIT       TO WS-HLD-CNTL-END-XML-TAG  
+ADIXIT
+ADIXIT     PERFORM XML-FORMAT-RESPONSE-XML   
+ADIXIT     .
+ADIXIT     MOVE 'T'                   TO WS-HLD-CNTL-OUTPUT-TYPE
+ADIXIT     MOVE 'Y'                   TO WS-HLD-CNTL-SEND-IF-NULL
+ADIXIT     MOVE '</ptrnRow>'           TO WS-HLD-CNTL-BEGIN-XML-TAG
+ADIXIT     MOVE SPACES                TO WS-HLD-CNTL-END-XML-TAG
+ADIXIT                                   WS-WRK-FLD-AREA
+ADIXIT 
+ADIXIT     PERFORM XML-FORMAT-RESPONSE-XML
+ADIXIT     .
+ADIXIT SECTION-EXIT.
+ADIXIT     EXIT.
+ADIXIT
+029800
+027300 0003-ICR-ROWS-INQ        SECTION.
+027400
+027500     MOVE SPACES              TO WS-WRK-FLD-AREA
+027600     MOVE 'T'                 TO WS-HLD-CNTL-OUTPUT-TYPE
+027700     MOVE '<pctRows>'         TO WS-HLD-CNTL-BEGIN-XML-TAG
+027800     MOVE SPACES              TO WS-HLD-CNTL-END-XML-TAG
+027900     
+028000     PERFORM XML-FORMAT-RESPONSE-XML
+028100          .
+028200     MOVE ZEROS               TO ICRSUB
+028300
+028400     PERFORM 0003-ICR-RULE-ROWS
+028500        VARYING ICRSUB FROM 1 BY 1
+028600          UNTIL ICRSUB > 20
+028700           OR ICRSUB > WS-ICR-NUM-ENTRIES
+028800          .
+028900     MOVE SPACES              TO WS-WRK-FLD-AREA
+029000     MOVE 'T'                 TO WS-HLD-CNTL-OUTPUT-TYPE
+029100     MOVE '</pctRows>'        TO WS-HLD-CNTL-BEGIN-XML-TAG
+029200     MOVE SPACES              TO WS-HLD-CNTL-END-XML-TAG
+029300     
+029400     PERFORM XML-FORMAT-RESPONSE-XML
+029500         .
+029600 SECTION-EXIT.
+029700     EXIT.
+
+029900 0003-ICR-RULE-ROWS                    SECTION.
+030000 
+030100     MOVE 11                    TO WS-HLD-CNTL-FIELD-LENGTH
+030200     MOVE 'T'                   TO WS-HLD-CNTL-OUTPUT-TYPE
+030300     MOVE 'Y'                   TO WS-HLD-CNTL-SEND-IF-NULL
+030400     MOVE '<pctRow>'         TO WS-HLD-CNTL-BEGIN-XML-TAG
+030500     MOVE SPACES                TO WS-HLD-CNTL-END-XML-TAG
+030600                                   WS-WRK-FLD-AREA
+030700 
+030800     PERFORM XML-FORMAT-RESPONSE-XML
+030900     .
+031000
+031100     MOVE WS-ICR-220-OPTION-CODE (ICRSUB)
+031200       TO WS-WRK-FLD-AREA                                                 
+031300     MOVE 'A'     TO WS-HLD-CNTL-OUTPUT-TYPE                              
+031400     MOVE '<optCode>'
+031500       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+031600     MOVE '</optCode>'
+031700       TO WS-HLD-CNTL-END-XML-TAG                                         
+031800     PERFORM XML-FORMAT-RESPONSE-XML    
+031900      .
+032000     MOVE WS-ICR-230-SOURCE-INFL-OPTN (ICRSUB)                            
+032100       TO WS-WRK-FLD-AREA                                                 
+032200     MOVE 'A'     TO WS-HLD-CNTL-OUTPUT-TYPE                              
+032300     MOVE '<sourceInflationType>'                                         
+032400             
+032500       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+032600     MOVE '</sourceInflationType>'                                        
+032700             
+032800       TO WS-HLD-CNTL-END-XML-TAG                                         
+032900     PERFORM XML-FORMAT-RESPONSE-XML   
+033000     .
+033100     MOVE WS-ICR-240-SOURCE-PCT  (ICRSUB)                                 
+033200       TO WS-NUM-DECIMAL-F                                                
+033300     MOVE WS-NUM-DECIMAL-C       TO WS-WRK-FLD-AREA
+033400     COMPUTE WS-HLD-CNTL-FIELD-LENGTH
+033500           = (LENGTH OF WS-NUM-DECIMAL-C  *  1)
+033600     SET WS-HLD-FORMAT-DECIMAL   TO TRUE
+033700     MOVE '<sourceInflationPer>'                                          
+033800            
+033900       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+034000     MOVE '</sourceInflationPer>'                                         
+034100            
+034200       TO WS-HLD-CNTL-END-XML-TAG                                         
+034300     PERFORM XML-FORMAT-RESPONSE-XML 
+034400     .
+034500     MOVE WS-ICR-250-SOURCE-LTM-MAX-YRS  (ICRSUB)                         
+034600       TO  WS-NUMBER                                                      
+034700     IF WS-NUMBER = ZEROS
+034800        MOVE SPACES       TO  WS-WRK-FLD-AREA
+034900     ELSE
+035000        MOVE WS-NUMBER-C  TO WS-WRK-FLD-AREA
+035100     END-IF
+035200       PERFORM 0019-MOVE-INTEGER
+035300     MOVE '<sourceLifetimeYrs>'                                           
+035400           
+035500       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+035600     MOVE '</sourceLifetimeYrs>'                                          
+035700           
+035800       TO WS-HLD-CNTL-END-XML-TAG                                         
+035900     PERFORM XML-FORMAT-RESPONSE-XML 
+036000     .      
+036100     MOVE WS-ICR-260-TARGET-INFL-OPTN  (ICRSUB)                           
+036200       TO WS-WRK-FLD-AREA                                                 
+036300     MOVE 'A'     TO WS-HLD-CNTL-OUTPUT-TYPE                              
+036400     MOVE '<targetInflationType>'                                         
+036500             
+036600       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+036700     MOVE '</targetInflationType>'                                        
+036800             
+036900       TO WS-HLD-CNTL-END-XML-TAG                                         
+037000     PERFORM XML-FORMAT-RESPONSE-XML 
+037100     . 
+037200     MOVE WS-ICR-270-TARGET-PCT (ICRSUB)                                  
+037300       TO WS-NUM-DECIMAL-F                                                
+037400     MOVE WS-NUM-DECIMAL-C       TO WS-WRK-FLD-AREA
+037500     COMPUTE WS-HLD-CNTL-FIELD-LENGTH
+037600           = (LENGTH OF WS-NUM-DECIMAL-C  *  1)
+037700     SET WS-HLD-FORMAT-DECIMAL   TO TRUE
+037800     MOVE '<targetInflationPer>'                                          
+037900            
+038000       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+038100     MOVE '</targetInflationPer>'                                         
+038200            
+038300       TO WS-HLD-CNTL-END-XML-TAG                                         
+038400     PERFORM XML-FORMAT-RESPONSE-XML 
+038500     .
+038600     MOVE WS-ICR-280-TARGET-LTM-MAX-YRS (ICRSUB)                          
+038700       TO WS-NUMBER                                                       
+038800     IF WS-NUMBER = ZEROS
+038900        MOVE SPACES       TO  WS-WRK-FLD-AREA
+039000     ELSE
+039100        MOVE WS-NUMBER-C  TO WS-WRK-FLD-AREA
+039200     END-IF
+039300       PERFORM 0019-MOVE-INTEGER
+039400     MOVE '<targeLifetimeYrs>'                                            
+039500          
+039600       TO WS-HLD-CNTL-BEGIN-XML-TAG                                       
+039700     MOVE '</targeLifetimeYrs>'                                           
+039800          
+039900       TO WS-HLD-CNTL-END-XML-TAG                                         
+040000     PERFORM XML-FORMAT-RESPONSE-XML 
+040100     .
+040200
+040300 
+040400     MOVE 'T'                   TO WS-HLD-CNTL-OUTPUT-TYPE
+040500     MOVE 'Y'                   TO WS-HLD-CNTL-SEND-IF-NULL
+040600     MOVE '</pctRow>'           TO WS-HLD-CNTL-BEGIN-XML-TAG
+040700     MOVE SPACES                TO WS-HLD-CNTL-END-XML-TAG
+040800                                   WS-WRK-FLD-AREA
+040900 
+041000     PERFORM XML-FORMAT-RESPONSE-XML
+041100     .
+041200 SECTION-EXIT.
+041300     EXIT.
+041400
+041500
+041600********************************************************
+041700* 0004-INQ-008-NEW SECTION                                 *
+041800* IT CREATES A INFLATION CHANGE RULE, WHICH INSERTS A NEW  *
+041900* RECORD IN ICR FILE.                                      *
+042000********************************************************
+042100 0004-INQ-008-NEW        SECTION.
+042200     PERFORM 1100-FILL-COBOL-LAYOUT
+042300     VARYING DATA-SUB FROM 50 BY 1
+042400       UNTIL DATA-SUB > 32746
+042500          OR INSPRO-AREA (DATA-SUB:9) = '</inspro>'
+042600
+042700     PERFORM 2000-READ  VARYING WS-I FROM 1 BY 1
+042800     UNTIL WS-I > W-ICR-080-NO-OF-RULES 
+ADIXIT
+ADIXIT     PERFORM 2001-PRT-SORT  VARYING WS-I FROM 1 BY 1
+ADIXIT     UNTIL WS-I > W-ICR-300-NO-OF-PRT-RULE 
+ADIXIT
+043000     PERFORM 4000-ADD-ICR
+043100
+043200     IF XMLE-ERROR
+043300         GO TO SECTION-EXIT
+043400     .
+043500
+043600     MOVE IOA-LOG-DATE
+043700       TO INSPRO-START-DATE
+043800
+043900     MOVE IOA-LOG-TIME
+044000       TO INSPRO-START-TIME
+044100
+044200     PERFORM XML-SET-DATE-TIME-STAMP
+044300
+044400
+044500     PERFORM XML-RSP-DOCUMENT-START
+044600     .
+044700
+044800 SECTION-EXIT.
+044900     EXIT.
+045000     EJECT
+045100
+045200 0005-INQ-008-CHG        SECTION.
+045300
+045400     MOVE W-ICR-010-LOG-DATE  TO INSPRO-HLD-STRT-DATE
+045500     MOVE W-ICR-020-LOG-TIME  TO INSPRO-HLD-STRT-TIME
+045600
+045700     PERFORM XML-FIND-DATE-TIME-STAMP
+045800
+045900     IF INSPRO-HLD-STRT-DATE-C  NOT = INSPRO-START-DATE-C
+046000     OR INSPRO-HLD-STRT-TIME-C  NOT = INSPRO-START-TIME-C
+046100         MOVE 'E'       TO XMLE-ERR-CHAR
+046200         MOVE 'OLDV'    TO XMLE-ERR-CODE
+046300         MOVE 'ICR-CHG'
+046400           TO XMLE-ERR-TAG 
+046500         PERFORM XML-FINISH-UP
+046600         GO TO SECTION-EXIT
+046700     END-IF
+046800     MOVE 0 TO W-ICR-080-NO-OF-RULES
+046900     MOVE 0 TO WS-ICR-TABLE
+ADIXIT     MOVE 0 TO W-ICR-300-NO-OF-PRT-RULE
+ADIXIT     MOVE SPACES TO WS-PRT-TABLE
+047000     PERFORM 1100-FILL-COBOL-LAYOUT
+047100     VARYING DATA-SUB FROM 50 BY 1
+047200       UNTIL DATA-SUB > 32746
+047300          OR INSPRO-AREA (DATA-SUB:9) = '</inspro>'                       
+047400
+047500                                                                  
+047600     IF XMLE-ERROR
+047700         GO TO SECTION-EXIT
+047800     END-IF
+047900     PERFORM 2000-READ  VARYING WS-I FROM 1 BY 1
+048000     UNTIL WS-I > W-ICR-080-NO-OF-RULES
+ADIXIT
+ADIXIT     PERFORM 2001-PRT-SORT  VARYING WS-I FROM 1 BY 1
+ADIXIT     UNTIL WS-I > W-ICR-300-NO-OF-PRT-RULE 
+ADIXIT
+048200     PERFORM 4200-UPDATE-ICR
+048300
+048400     IF XMLE-ERROR
+048500         GO TO SECTION-EXIT
+048600     END-IF
+048700
+048800     MOVE IOA-LOG-DATE
+048900       TO INSPRO-START-DATE
+049000
+049100     MOVE IOA-LOG-TIME
+049200       TO INSPRO-START-TIME
+049300
+049400     PERFORM XML-SET-DATE-TIME-STAMP
+049500
+049600     PERFORM XML-RSP-DOCUMENT-START
+049700     .
+049800
+049900 SECTION-EXIT.
+050000     EXIT.
+050100     EJECT
+050200
+050300 0006-INQ-008-DEL        SECTION.
+050400
+050500     MOVE W-ICR-010-LOG-DATE
+050600       TO INSPRO-HLD-STRT-DATE
+050700
+050800     MOVE W-ICR-020-LOG-TIME
+050900       TO INSPRO-HLD-STRT-TIME
+051000
+051100     PERFORM XML-FIND-DATE-TIME-STAMP
+051200
+051300     IF INSPRO-HLD-STRT-DATE-C  NOT = INSPRO-START-DATE-C
+051400     OR INSPRO-HLD-STRT-TIME-C  NOT = INSPRO-START-TIME-C
+051500         MOVE 'E'       TO XMLE-ERR-CHAR
+051600         MOVE 'OLDV'    TO XMLE-ERR-CODE
+051700         MOVE 'ICR-DEL'
+051800           TO XMLE-ERR-TAG 
+051900         PERFORM XML-FINISH-UP
+052000         GO TO SECTION-EXIT
+052100     .
+052200
+052300     PERFORM 4500-DEL-ICR
+052400
+052500     IF XMLE-ERROR
+052600         GO TO SECTION-EXIT
+052700     .
+052800
+052900     PERFORM XML-RSP-DOCUMENT-START
+053000     .
+053100
+053200 SECTION-EXIT.
+053300     EXIT.
+053400     EJECT
+053500 0019-MOVE-INTEGER                 SECTION.
+053600     COMPUTE WS-HLD-CNTL-FIELD-LENGTH
+053700           = (LENGTH OF WS-NUMBER-C)  * 1
+053800     SET WS-HLD-FORMAT-NUMERICS      TO TRUE
+053900     .
+054000 SECTION-EXIT.
+054100     EXIT.
+054200
+054300
+054400
+054500
+054600 1000-FILL-COBOL-KEY-DATA    SECTION.
+054700
+054800     IF INSPRO-AREA (DATA-SUB:12) = '<identifier>'
+054900         MOVE DATA-SUB          TO XML-IN-SUB
+055000         PERFORM XML-EXTRACT-INPUT-DATA
+055100         MOVE XML-OUT-SUB       TO DATA-SUB
+055200         MOVE XML-OUT-NEW-DATA
+055300           TO WS-IDENTIFIER
+055400     .
+055500     IF INSPRO-AREA (DATA-SUB:24) = '<state tbl="STATE-CODE">'            
+055600     OR INSPRO-AREA (DATA-SUB:08) = '</state>'
+055700         MOVE DATA-SUB          TO XML-IN-SUB
+055800         PERFORM XML-EXTRACT-INPUT-DATA
+055900         MOVE XML-OUT-SUB       TO DATA-SUB
+056000         MOVE XML-OUT-NEW-DATA
+056100           TO WS-STATE
+056200     .
+056300
+056400
+056500 SECTION-EXIT.
+056600     EXIT.
+056700     EJECT
+056800
+056900 1100-FILL-COBOL-LAYOUT SECTION.
+057000 
+057100     IF INSPRO-AREA (DATA-SUB:6) = '<desc>'
+057200         MOVE DATA-SUB          TO XML-IN-SUB
+057300         PERFORM XML-EXTRACT-INPUT-DATA
+057400         MOVE XML-OUT-SUB       TO DATA-SUB
+057500         MOVE XML-OUT-NEW-DATA
+057600           TO WS-ICR-060-DESCRIPTION
+057700     END-IF
+057800
+057900     IF INSPRO-AREA (DATA-SUB:10) = '<eligdays>'
+058000         MOVE DATA-SUB          TO XML-IN-SUB
+058100         PERFORM XML-EXTRACT-INPUT-DATA
+058200         MOVE XML-OUT-SUB       TO DATA-SUB
+058300         MOVE XML-OUT-NEW-DATA  TO IMEDIT-INPUT-FIELDS
+058400         MOVE 01                TO IMEDIT-FORMAT
+058500         PERFORM IM-EDIT-ROUTINE
+058600         IF  IMEDIT-VALID
+058700            MOVE IMEDIT-NUMBER
+058800            TO WS-ICR-070-ELIG-DAYS
+058900            GO TO SECTION-EXIT
+059000         ELSE
+059100            MOVE 0 TO ICRSUB
+059200            GO TO   SECTION-EXIT
+059300         END-IF
+059400     END-IF
+059500
+059600     PERFORM 3000-DID-ANYTHING-CHANGE
+059700     
+059800     IF  INSPRO-AREA (DATA-SUB:09) = '<pctRows>'
+059900         MOVE ZEROES       TO ICRSUB
+060000         MOVE DATA-SUB     TO XML-IN-SUB                      
+060100         PERFORM 1200-EXTRACT-ICR-ROWS
+060200         VARYING DATA-SUB FROM DATA-SUB BY 1
+060300           UNTIL DATA-SUB > LENGTH OF INSPRO-AREA       
+060400              OR ICRSUB > 20
+ADIXIT*             OR INSPRO-AREA (DATA-SUB:10) = '</pctRows'
+ADIXIT		    OR INSPRO-AREA (DATA-SUB:09) = '/pctRows>'
+060600              OR XMLE-ERR-CODE           NOT = SPACES 
+060700          
+060800         PERFORM 1400-PROCESS-ICR-ROWS
+060900     END-IF
+
+ADIXIT     IF  INSPRO-AREA (DATA-SUB:10) = '<ptrnRows>'
+ADIXIT         MOVE ZEROES       TO PRTSUB
+ADIXIT         MOVE DATA-SUB     TO XML-IN-SUB                      
+ADIXIT         PERFORM 2100-EXTRACT-PRT-ROWS
+ADIXIT         VARYING DATA-SUB FROM DATA-SUB BY 1
+ADIXIT           UNTIL DATA-SUB > LENGTH OF INSPRO-AREA       
+ADIXIT              OR PRTSUB > 50
+ADIXIT              OR INSPRO-AREA (DATA-SUB:10) = '/ptrnRows>'
+ADIXIT              OR XMLE-ERR-CODE           NOT = SPACES 
+ADIXIT         
+ADIXIT         PERFORM 2400-PROCESS-PRT-ROWS
+ADIXIT     END-IF
+ADIXIT     .
+ADIXIT
+ADIXIT SECTION-EXIT.
+ADIXIT     EXIT.
+ADIXIT     EJECT
+ADIXIT
+061600 1200-EXTRACT-ICR-ROWS   SECTION.
+061700
+061800     PERFORM VARYING DATA-SUB FROM DATA-SUB BY 1                     
+061900       UNTIL DATA-SUB > LENGTH OF INSPRO-AREA          
+062000          OR INSPRO-AREA (DATA-SUB:08) = '<pctRow>'
+062100          OR INSPRO-AREA (DATA-SUB:10) = '</pctRows>'
+062200          OR XMLE-ERR-CODE           NOT = SPACES                         
+062300     END-PERFORM
+062400
+062500     IF  DATA-SUB > LENGTH OF INSPRO-AREA          
+062600     OR  INSPRO-AREA (DATA-SUB:10) = '</pctRows>'
+062700     OR  XMLE-ERR-CODE NOT = SPACES
+062800         CONTINUE
+062900     ELSE
+063000         ADD 1            TO ICRSUB
+063100         PERFORM 1300-EXTRACT-ICRROW-FLD
+063200         VARYING DATA-SUB FROM DATA-SUB BY 1                           
+063300           UNTIL DATA-SUB > LENGTH OF INSPRO-AREA        
+063400              OR INSPRO-AREA (DATA-SUB:09) = '</pctRow>'
+063500              OR XMLE-ERR-CODE NOT = SPACES
+063600         MOVE ICRSUB      TO WS-ICR-NUM-ENTRIES
+063700     END-IF                                                               
+063800     .     
+063900 SECTION-EXIT.
+064000     EXIT.
+064100     EJECT
+
+ADIXIT 2100-EXTRACT-PRT-ROWS   SECTION.
+ADIXIT
+ADIXIT     PERFORM VARYING DATA-SUB FROM DATA-SUB BY 1                     
+ADIXIT       UNTIL DATA-SUB > LENGTH OF INSPRO-AREA          
+ADIXIT          OR INSPRO-AREA (DATA-SUB:09) = '<ptrnRow>'
+ADIXIT          OR INSPRO-AREA (DATA-SUB:11) = '</ptrnRows>'
+ADIXIT          OR XMLE-ERR-CODE           NOT = SPACES                         
+ADIXIT     END-PERFORM
+ADIXIT
+ADIXIT     IF  DATA-SUB > LENGTH OF INSPRO-AREA          
+ADIXIT     OR  INSPRO-AREA (DATA-SUB:11) = '</ptrnRows>'
+ADIXIT     OR  XMLE-ERR-CODE NOT = SPACES
+ADIXIT         CONTINUE
+ADIXIT     ELSE
+ADIXIT         ADD 1            TO PRTSUB
+ADIXIT         PERFORM 2300-EXTRACT-PRTROW-FLD
+ADIXIT         VARYING DATA-SUB FROM DATA-SUB BY 1                           
+ADIXIT           UNTIL DATA-SUB > LENGTH OF INSPRO-AREA        
+ADIXIT              OR INSPRO-AREA (DATA-SUB:10) = '</ptrnRow>'
+ADIXIT              OR XMLE-ERR-CODE NOT = SPACES
+ADIXIT         MOVE PRTSUB      TO WS-PRT-NUM-ENTRIES
+ADIXIT     END-IF                                                               
+ADIXIT     .     
+ADIXIT SECTION-EXIT.
+ADIXIT     EXIT.
+ADIXIT     EJECT
+
+ADIXIT 2300-EXTRACT-PRTROW-FLD SECTION.
+ADIXIT
+ADIXIT***************************************************************
+ADIXIT* CAPTURE THE ROWS PASSED FROM THE WEB TO AN INERNAL TABLE    *
+ADIXIT* WS-PRT-TABLE.                                               *
+ADIXIT***************************************************************
+ADIXIT     
+ADIXIT     IF INSPRO-AREA (DATA-SUB:12) = '</ptrnRowId>'
+ADIXIT        MOVE 0 TO WS-PRT-ROWID (PRTSUB)
+ADIXIT        GO TO   SECTION-EXIT
+065400     ELSE
+ADIXIT         IF  INSPRO-AREA (DATA-SUB:11) = '<ptrnRowId>'
+ADIXIT             MOVE DATA-SUB          TO XML-IN-SUB
+ADIXIT             PERFORM XML-EXTRACT-INPUT-DATA
+ADIXIT             MOVE XML-OUT-SUB       TO DATA-SUB
+ADIXIT             MOVE XML-OUT-NEW-DATA  TO IMEDIT-INPUT-FIELDS
+ADIXIT             MOVE 01                TO IMEDIT-FORMAT
+ADIXIT             PERFORM IM-EDIT-ROUTINE
+ADIXIT             IF  IMEDIT-VALID
+ADIXIT                 MOVE IMEDIT-NUMBER
+ADIXIT                   TO WS-PRT-ROWID (PRTSUB)
+ADIXIT                 GO TO SECTION-EXIT
+ADIXIT             ELSE
+ADIXIT                 MOVE 0 TO PRTSUB
+ADIXIT                 GO TO   SECTION-EXIT
+ADIXIT             END-IF
+ADIXIT         END-IF
+ADIXIT     END-IF
+ADIXIT     IF  INSPRO-AREA (DATA-SUB:11) = '<ptrnState>'
+ADIXIT         MOVE DATA-SUB          TO XML-IN-SUB
+ADIXIT         PERFORM XML-EXTRACT-INPUT-DATA
+ADIXIT         MOVE XML-OUT-SUB       TO DATA-SUB
+ADIXIT         MOVE XML-OUT-NEW-DATA
+ADIXIT           TO WS-PRT-320-STATE-CODE (PRTSUB)
+ADIXIT     END-IF
+ADIXIT     
+ADIXIT     IF  INSPRO-AREA (DATA-SUB:10) = '<ptrnCode>'              
+ADIXIT              
+ADIXIT         MOVE DATA-SUB          TO XML-IN-SUB
+ADIXIT         PERFORM XML-EXTRACT-INPUT-DATA
+ADIXIT         MOVE XML-OUT-SUB       TO DATA-SUB
+ADIXIT         MOVE XML-OUT-NEW-DATA
+ADIXIT           TO WS-PRT-330-PRTSHIP (PRTSUB)                        
+ADIXIT     END-IF
+ADIXIT     .
+ADIXIT
+ADIXIT SECTION-EXIT.
+ADIXIT     EXIT.
+ADIXIT
+064300 1300-EXTRACT-ICRROW-FLD SECTION.
+064400
+064500***************************************************************
+064600* CAPTURE THE ROWS PASSED FROM THE WEB TO AN INERNAL TABLE    *
+064700* WS-ICR-TABLE.                                               *
+064800* ONLY NEW, CHANGED, OR DELETED ROWS ARE PASSED.              *
+064900***************************************************************
+065000     
+065100     IF INSPRO-AREA (DATA-SUB:08) = '</rowId>'
+065200        MOVE 0 TO WS-ICR-ROWID (ICRSUB)
+065300        GO TO   SECTION-EXIT
+065400     ELSE
+065500         IF  INSPRO-AREA (DATA-SUB:07) = '<rowId>'
+065600             MOVE DATA-SUB          TO XML-IN-SUB
+065700             PERFORM XML-EXTRACT-INPUT-DATA
+065800             MOVE XML-OUT-SUB       TO DATA-SUB
+065900             MOVE XML-OUT-NEW-DATA  TO IMEDIT-INPUT-FIELDS
+066000             MOVE 01                TO IMEDIT-FORMAT
+066100             PERFORM IM-EDIT-ROUTINE
+066200             IF  IMEDIT-VALID
+066300                 MOVE IMEDIT-NUMBER
+066400                   TO WS-ICR-ROWID (ICRSUB)
+066500                 GO TO SECTION-EXIT
+066600             ELSE
+066700                 MOVE 0 TO ICRSUB
+066800                 GO TO   SECTION-EXIT
+066900             END-IF
+067000         END-IF
+067100     END-IF
+067200     IF  INSPRO-AREA (DATA-SUB:9) = '<optCode>'
+067300         MOVE DATA-SUB          TO XML-IN-SUB
+067400         PERFORM XML-EXTRACT-INPUT-DATA
+067500         MOVE XML-OUT-SUB       TO DATA-SUB
+067600         MOVE XML-OUT-NEW-DATA
+067700           TO WS-ICR-220-OPTION-CODE (ICRSUB)
+067800     END-IF
+067900     
+068000     IF  INSPRO-AREA (DATA-SUB:21) = '<sourceInflationType>'              
+068100              
+068200         MOVE DATA-SUB          TO XML-IN-SUB
+068300         PERFORM XML-EXTRACT-INPUT-DATA
+068400         MOVE XML-OUT-SUB       TO DATA-SUB
+068500         MOVE XML-OUT-NEW-DATA
+068600           TO WS-ICR-230-SOURCE-INFL-OPTN (ICRSUB)                        
+068700     END-IF
+068800     IF  INSPRO-AREA (DATA-SUB:20) = '<sourceInflationPer>'               
+068900             
+069000         MOVE DATA-SUB          TO XML-IN-SUB
+069100         PERFORM XML-EXTRACT-INPUT-DATA
+069200         MOVE XML-OUT-SUB       TO DATA-SUB
+069300         MOVE XML-OUT-NEW-DATA  TO IMEDIT-INPUT-FIELDS
+069400         MOVE 01                TO IMEDIT-FORMAT
+069500         PERFORM IM-EDIT-ROUTINE
+069600         IF  IMEDIT-VALID
+069700             MOVE IMEDIT-NUMBER
+069800             TO WS-ICR-240-SOURCE-PCT (ICRSUB)                            
+069900         ELSE
+070000             MOVE 0 TO ICRSUB
+070100             GO TO   SECTION-EXIT
+070200         END-IF
+070300     END-IF
+070400     IF  INSPRO-AREA (DATA-SUB:19) = '<sourceLifetimeYrs>'                
+070500            
+070600         MOVE DATA-SUB          TO XML-IN-SUB
+070700         PERFORM XML-EXTRACT-INPUT-DATA
+070800         MOVE XML-OUT-SUB       TO DATA-SUB
+070900         MOVE XML-OUT-NEW-DATA  TO IMEDIT-INPUT-FIELDS
+071000         MOVE 01                TO IMEDIT-FORMAT
+071100         PERFORM IM-EDIT-ROUTINE
+071200         IF  IMEDIT-VALID
+071300            MOVE IMEDIT-NUMBER
+071400            TO WS-ICR-LTM-SRC(ICRSUB)
+071500         ELSE
+071600            MOVE 0 TO ICRSUB
+071700            GO TO   SECTION-EXIT
+071800         END-IF
+071900     END-IF
+072000     IF  INSPRO-AREA (DATA-SUB:21) = '<targetInflationType>'              
+072100              
+072200         MOVE DATA-SUB          TO XML-IN-SUB
+072300         PERFORM XML-EXTRACT-INPUT-DATA
+072400         MOVE XML-OUT-SUB       TO DATA-SUB
+072500         MOVE XML-OUT-NEW-DATA
+072600           TO WS-ICR-260-TARGET-INFL-OPTN (ICRSUB)                        
+072700     END-IF
+072800     IF  INSPRO-AREA (DATA-SUB:20) = '<targetInflationPer>'               
+072900             
+073000         MOVE DATA-SUB          TO XML-IN-SUB
+073100         PERFORM XML-EXTRACT-INPUT-DATA
+073200         MOVE XML-OUT-SUB       TO DATA-SUB
+073300         MOVE XML-OUT-NEW-DATA  TO IMEDIT-INPUT-FIELDS
+073400         MOVE 01                TO IMEDIT-FORMAT
+073500         PERFORM IM-EDIT-ROUTINE
+073600         IF  IMEDIT-VALID
+073700             MOVE IMEDIT-NUMBER
+073800             TO WS-ICR-270-TARGET-PCT (ICRSUB)                            
+073900         ELSE
+074000             MOVE 0 TO ICRSUB
+074100             GO TO   SECTION-EXIT
+074200         END-IF
+074300     END-IF
+074400     IF  INSPRO-AREA (DATA-SUB:18) = '<targeLifetimeYrs>'                 
+074500           
+074600         MOVE DATA-SUB          TO XML-IN-SUB
+074700         PERFORM XML-EXTRACT-INPUT-DATA
+074800         MOVE XML-OUT-SUB       TO DATA-SUB
+074900         MOVE XML-OUT-NEW-DATA  TO IMEDIT-INPUT-FIELDS
+075000         MOVE 01                TO IMEDIT-FORMAT
+075100         PERFORM IM-EDIT-ROUTINE
+075200         IF  IMEDIT-VALID
+075300           MOVE IMEDIT-NUMBER
+075400           TO WS-ICR-LTM-TRGT(ICRSUB)                                     
+075500           GO TO SECTION-EXIT
+075600         ELSE
+075700           MOVE 0 TO ICRSUB
+075800           GO TO   SECTION-EXIT
+075900         END-IF
+076000
+076100     END-IF
+076200     .
+076300
+076400 SECTION-EXIT.
+076500     EXIT.
+076600     
+076700 1400-PROCESS-ICR-ROWS            SECTION.
+076800
+076900****************************************************************
+077000*** PROCESSING ICR ROWS                                      ***
+077100****************************************************************
+077200     INITIALIZE    W-ICR-080-NO-OF-RULES
+077300
+077400     PERFORM VARYING WS-ICRSUB FROM 1 BY 1
+077500     UNTIL
+077600     WS-ICRSUB > 20
+077700      INITIALIZE W-ICR-210-INFL-CHANGE-RULE (WS-ICRSUB)
+077800 
+077900      END-PERFORM
+078000****************************************************************
+078100*** BUILD THE ICR RECORD TABLE FROM THE WS- TABLE.           ***
+078200****************************************************************
+078300     PERFORM VARYING WS-ICRSUB FROM 1 BY 1
+078400     UNTIL WS-ICRSUB = 21
+078500         OR WS-ICR-220-OPTION-CODE (WS-ICRSUB) = SPACES
+078600          ADD 1        TO W-ICR-080-NO-OF-RULES
+078700            MOVE WS-ICR-210-INFL-CHANGE-RULE (WS-ICRSUB)
+078800               TO W-ICR-210-INFL-CHANGE-RULE (WS-ICRSUB)
+078900     END-PERFORM
+079000      
+079100****************************************************************
+079200*** INITIALIZE THE REST OF THE ICR RECORD TABLE.             ***
+079300****************************************************************
+079400     COMPUTE WS-ICR-NUM-ENTRIES = W-ICR-080-NO-OF-RULES  + 1
+079500     PERFORM VARYING ICRSUB FROM WS-ICR-NUM-ENTRIES BY 1
+079600       UNTIL ICRSUB > 20
+079700         INITIALIZE W-ICR-210-INFL-CHANGE-RULE (ICRSUB)
+079800     END-PERFORM
+079900
+080000
+080100 .                   
+080200 SECTION-EXIT.
+080300 EXIT.
+080400     
+
+ADIXIT 2400-PROCESS-PRT-ROWS            SECTION.
+ADIXIT
+ADIXIT****************************************************************
+ADIXIT*** PROCESSING PRT ROWS                                      ***
+ADIXIT****************************************************************
+ADIXIT     
+ADIXIT     INITIALIZE   W-ICR-300-NO-OF-PRT-RULE		
+ADIXIT     PERFORM VARYING WS-PRTSUB FROM 1 BY 1
+ADIXIT     UNTIL WS-PRTSUB > 50
+ADIXIT      INITIALIZE W-ICR-310-INFL-CHANGE-OFFERS (WS-PRTSUB)
+ADIXIT     END-PERFORM
+ADIXIT****************************************************************
+ADIXIT*** BUILD THE PRT RECORD TABLE FROM THE WS- TABLE.           ***
+ADIXIT****************************************************************
+ADIXIT     PERFORM VARYING WS-PRTSUB FROM 1 BY 1
+ADIXIT     UNTIL WS-PRTSUB = 51
+ADIXIT         OR WS-PRT-320-STATE-CODE (WS-PRTSUB) = SPACES
+ADIXIT          ADD 1        TO W-ICR-300-NO-OF-PRT-RULE
+ADIXIT            MOVE WS-PRT-310-INFL-OFFER (WS-PRTSUB)
+ADIXIT               TO W-ICR-310-INFL-CHANGE-OFFERS (WS-PRTSUB)
+ADIXIT     END-PERFORM
+ADIXIT      
+ADIXIT****************************************************************
+ADIXIT*** INITIALIZE THE REST OF THE PRT RECORD TABLE.             ***
+ADIXIT****************************************************************
+ADIXIT     COMPUTE WS-PRT-NUM-ENTRIES = W-ICR-300-NO-OF-PRT-RULE  + 1
+ADIXIT     PERFORM VARYING PRTSUB FROM WS-PRT-NUM-ENTRIES BY 1
+ADIXIT       UNTIL PRTSUB > 50
+ADIXIT         INITIALIZE W-ICR-310-INFL-CHANGE-OFFERS (PRTSUB)
+ADIXIT     END-PERFORM
+ADIXIT .                   
+ADIXIT SECTION-EXIT.
+ADIXIT EXIT.
+ADIXIT     
+080500******************************************************************
+080600****   SORTING LOGIC                                          ****
+080700 2000-READ                  SECTION.
+080800
+080900     COMPUTE WS-J = WS-I + 1
+081000     PERFORM 2010-COMPARE
+081100     VARYING WS-K FROM WS-J BY 1
+081200     UNTIL WS-K >W-ICR-080-NO-OF-RULES
+081300 .
+081400 SECTION-EXIT.
+081500 EXIT.
+081600
+081700 2010-COMPARE              SECTION.
+081800
+081900     IF W-ICR-220-OPTION-CODE (WS-I)>W-ICR-220-OPTION-CODE (WS-K)
+082000       MOVE W-ICR-210-INFL-CHANGE-RULE (WS-I)   TO WS-TEMP
+082100       MOVE W-ICR-210-INFL-CHANGE-RULE (WS-K)
+082200       TO W-ICR-210-INFL-CHANGE-RULE (WS-I)
+082300       MOVE WS-TEMP     TO W-ICR-210-INFL-CHANGE-RULE (WS-K)
+082400     END-IF
+082500
+082600     .
+082700 SECTION-EXIT.
+082800     EXIT. 
+ADIXIT*****************************************************************
+ADIXIT****   SORTING LOGIC FOR PRT PAIRING ****************************
+ADIXIT*****************************************************************
+ADIXIT 2001-PRT-SORT                  SECTION.
+ADIXIT
+ADIXIT     COMPUTE WS-J = WS-I + 1
+ADIXIT     PERFORM 2020-PRT-COMPARE
+ADIXIT     VARYING WS-K FROM WS-J BY 1
+ADIXIT     UNTIL WS-K >W-ICR-300-NO-OF-PRT-RULE 
+ADIXIT .
+ADIXIT SECTION-EXIT.
+ADIXIT EXIT.
+ADIXIT
+ADIXIT 2020-PRT-COMPARE              SECTION.
+ADIXIT
+ADIXIT     IF W-ICR-320-STATE-CODE (WS-I)>W-ICR-320-STATE-CODE (WS-K)
+ADIXIT       MOVE W-ICR-310-INFL-CHANGE-OFFERS (WS-I)   TO WS-TEMP1
+ADIXIT       MOVE W-ICR-310-INFL-CHANGE-OFFERS (WS-K)
+ADIXIT       TO W-ICR-310-INFL-CHANGE-OFFERS (WS-I)
+ADIXIT       MOVE WS-TEMP1     TO W-ICR-310-INFL-CHANGE-OFFERS (WS-K)
+ADIXIT     END-IF
+ADIXIT
+ADIXIT     IF W-ICR-320-STATE-CODE (WS-I)= W-ICR-320-STATE-CODE (WS-K)
+ADIXIT       IF W-ICR-330-PRTSHIP (WS-I) > W-ICR-330-PRTSHIP (WS-K)
+ADIXIT         MOVE W-ICR-310-INFL-CHANGE-OFFERS (WS-I)   TO WS-TEMP1
+ADIXIT         MOVE W-ICR-310-INFL-CHANGE-OFFERS (WS-K)
+ADIXIT         TO W-ICR-310-INFL-CHANGE-OFFERS (WS-I)
+ADIXIT         MOVE WS-TEMP1     TO W-ICR-310-INFL-CHANGE-OFFERS (WS-K)
+ADIXIT       END-IF
+ADIXIT     END-IF
+ADIXIT   .
+ADIXIT SECTION-EXIT.
+ADIXIT     EXIT. 
+ADIXIT
+082900 3000-DID-ANYTHING-CHANGE  SECTION.                               
+083000
+083100*******************************************************
+083200* 3000-DID-ANYTHING-CHANGE     SECTION                *
+083300*******************************************************
+083400     IF  W-ICR-060-DESCRIPTION NOT = WS-ICR-060-DESCRIPTION               
+083500       MOVE  WS-ICR-060-DESCRIPTION
+083600                       TO W-ICR-060-DESCRIPTION
+083700     END-IF
+083800
+083900     IF  W-ICR-070-ELIG-DAYS  NOT = WS-ICR-070-ELIG-DAYS
+084000       MOVE  WS-ICR-070-ELIG-DAYS TO W-ICR-070-ELIG-DAYS
+084100     END-IF
+084200     .
+084300 SECTION-EXIT.
+084400     EXIT.
+084500                
+084600 4000-ADD-ICR     SECTION.
+084700
+084800     MOVE SPACES      TO W-ICR-050-INFLATION-RULE-KEY
+084900     MOVE 'IC'               TO W-ICR-051-RECORD-ID
+085000     MOVE WS-IDENTIFIER      TO W-ICR-052-IDENTIFIER
+085100     MOVE WS-STATE           TO W-ICR-053-STATE
+085200
+085300     MOVE IO-WRITE-INITIAL                TO IO-FUNC
+085400     MOVE W-ICR-050-INFLATION-RULE-KEY    TO IO-KEY
+085500     MOVE W-ICR-CHANGE-RULE-DATA          TO IO-AREA
+085600     PERFORM IO-DATA-BASE
+085700
+085800     IF NOT IO-NORMAL
+085900        MOVE '4'             TO XMLE-ERR-CHAR
+086000        IF IO-DUPREC OR IO-DUPKEY
+086100           MOVE'DUPLICATE INFLATION RULE' TO XMLE-ERR-CODE
+086200        ELSE
+086300           MOVE'UNABLE TO WRITE NEW INFLATION RULE'
+086400           TO XMLE-ERR-CODE
+086500        END-IF
+086600        MOVE 'ICR'           TO XMLE-ERR-TAG
+086700        PERFORM XML-FINISH-UP
+086800        GO TO SECTION-EXIT
+086900        .
+087000
+087100 SECTION-EXIT
+087200  EJECT
+087300  .
+087400 4200-UPDATE-ICR     SECTION.
+087500
+087600     MOVE SPACES      TO W-ICR-050-INFLATION-RULE-KEY
+087700     MOVE 'IC'                   TO W-ICR-051-RECORD-ID                   
+087800     MOVE WS-IDENTIFIER          TO W-ICR-052-IDENTIFIER
+087900     MOVE WS-STATE               TO W-ICR-053-STATE
+088000     MOVE IO-READ-EXACT-LOCK              TO IO-FUNC
+088100     MOVE W-ICR-050-INFLATION-RULE-KEY    TO IO-KEY
+088200     PERFORM IO-DATA-BASE
+088300
+088400     IF NOT IO-NORMAL
+088500        MOVE 'E'       TO XMLE-ERR-CHAR
+088600        MOVE 'ERROR IN LOCKING INFLATION RULE'
+088700        TO XMLE-ERR-CODE
+088800        MOVE 'ICR'
+088900        TO XMLE-ERR-TAG
+089000        PERFORM XML-FINISH-UP
+089100        GO TO SECTION-EXIT
+089200     .
+089300     IF W-ICR-070-ELIG-DAYS = 0
+089400        MOVE ZEROS TO W-ICR-080-NO-OF-RULES
+089500     END-IF   
+089600     MOVE IO-WRITE-UPDATE               TO IO-FUNC
+089700     MOVE W-ICR-CHANGE-RULE-DATA        TO IO-AREA
+089800     MOVE W-ICR-050-INFLATION-RULE-KEY  TO IO-KEY
+089900     PERFORM IO-DATA-BASE
+090000
+090100     IF NOT IO-NORMAL
+090200        MOVE 'ERROR IN UPDATING INFLATION RULE'
+090300        TO XMLE-ERR-CODE
+090400        MOVE 'E'          TO XMLE-ERR-CHAR
+090500        MOVE 'ICR-UPDATE' TO XMLE-ERR-TAG
+090600        PERFORM XML-FINISH-UP
+090700        GO TO SECTION-EXIT
+090800     .
+090900
+091000 SECTION-EXIT.
+091100     EJECT
+091200
+091300 4500-DEL-ICR        SECTION.
+091400
+091500     MOVE SPACES    TO W-ICR-050-INFLATION-RULE-KEY
+091600
+091700     MOVE 'IC'                    TO W-ICR-051-RECORD-ID                  
+091800     MOVE WS-IDENTIFIER           TO W-ICR-052-IDENTIFIER
+091900     MOVE WS-STATE                TO W-ICR-053-STATE
+092000     MOVE SPACES                  TO W-ICR-054-FILLER
+092100
+092200     MOVE IO-READ-EXACT-LOCK            TO IO-FUNC
+092300     MOVE W-ICR-050-INFLATION-RULE-KEY  TO IO-KEY
+092400     PERFORM IO-DATA-BASE
+092500
+092600     IF NOT IO-NORMAL
+092700        MOVE '9435'     TO XMLE-ERR-CODE
+092800        MOVE 'E'       TO XMLE-ERR-CHAR
+092900        MOVE 'DEL'
+093000        TO XMLE-ERR-TAG
+093100        PERFORM XML-FINISH-UP
+093200        GO TO SECTION-EXIT
+093300     .
+093400
+093500     MOVE IO-DELETE                       TO IO-FUNC
+093600     MOVE W-ICR-050-INFLATION-RULE-KEY    TO IO-KEY
+093700     PERFORM IO-DATA-BASE
+093800
+093900     IF NOT IO-NORMAL
+094000        MOVE '9435'     TO XMLE-ERR-CODE
+094100        MOVE 'E'       TO XMLE-ERR-CHAR
+094200        MOVE 'uDel'
+094300        TO XMLE-ERR-TAG
+094400        PERFORM XML-FINISH-UP
+094500        GO TO SECTION-EXIT
+094600     END-IF
+094700     .
+094800                                                         
+094900 SECTION-EXIT.
+095000     EJECT                                                                
+095100                               
+095200
+095300
+095400 7500-READ-ICR               SECTION.                                     
+095500                                                                          
+095600     MOVE SPACES        TO W-ICR-050-INFLATION-RULE-KEY
+095700     MOVE 'IC'          TO W-ICR-051-RECORD-ID                            
+095800     MOVE WS-IDENTIFIER TO W-ICR-052-IDENTIFIER
+095900     MOVE WS-STATE      TO W-ICR-053-STATE
+096000
+096100     MOVE IO-READ-EXACT-INQ                TO IO-FUNC
+096200     MOVE W-ICR-050-INFLATION-RULE-KEY     TO IO-KEY
+096300     PERFORM IO-DATA-BASE
+096400
+096500     IF IO-NORMAL
+096600         MOVE IO-AREA   TO W-ICR-CHANGE-RULE-DATA
+096700     ELSE                                                                 
+096800         MOVE 'E'       TO XMLE-ERR-CHAR
+096900         MOVE '1052'    TO XMLE-ERR-CODE
+097000         MOVE 'ICR'
+097100           TO XMLE-ERR-TAG 
+097200         PERFORM XML-FINISH-UP
+097300         GO TO SECTION-EXIT
+097400     END-IF
+097500
+097600     MOVE W-ICR-060-DESCRIPTION
+097700       TO WS-ICR-060-DESCRIPTION
+097800     MOVE W-ICR-070-ELIG-DAYS
+097900       TO WS-ICR-070-ELIG-DAYS
+098000     MOVE W-ICR-080-NO-OF-RULES
+098100       TO WS-ICR-080-NO-OF-RULES
+098200          WS-ICR-NUM-ENTRIES
+ADIXIT     MOVE W-ICR-300-NO-OF-PRT-RULE 
+ADIXIT       TO WS-PRT-300-NO-OF-PRT-RULE 
+ADIXIT         WS-PRT-NUM-ENTRIES
+098300     PERFORM 7550-MOVE-ICR-WS
+098400     VARYING ICRSUB FROM 1 BY 1
+098500       UNTIL ICRSUB > WS-ICR-NUM-ENTRIES
+ADIXIT     PERFORM 7510-MOVE-PRT-WS
+ADIXIT     VARYING PRTSUB FROM 1 BY 1
+ADIXIT       UNTIL PRTSUB > WS-PRT-NUM-ENTRIES
+098600     .
+098700                                                                          
+098800 SECTION-EXIT.                                                            
+098900     EJECT
+099000
+099100 7550-MOVE-ICR-WS     SECTION.
+099200*************************************************************
+099300* MOVE SFS DATA TO INTERNAL TABLE WS-ICR-TABLE
+099400*************************************************************
+099500     MOVE W-ICR-220-OPTION-CODE (ICRSUB)
+099600       TO WS-ICR-220-OPTION-CODE (ICRSUB)
+099700     MOVE W-ICR-230-SOURCE-INFL-OPTN (ICRSUB)
+099800       TO WS-ICR-230-SOURCE-INFL-OPTN (ICRSUB)
+099900     MOVE W-ICR-240-SOURCE-PCT (ICRSUB)
+100000       TO WS-ICR-240-SOURCE-PCT  (ICRSUB)
+100100     MOVE W-ICR-250-SOURCE-LTM-MAX-YRS (ICRSUB)
+100200       TO WS-ICR-250-SOURCE-LTM-MAX-YRS (ICRSUB)
+100300     MOVE W-ICR-260-TARGET-INFL-OPTN (ICRSUB)
+100400       TO WS-ICR-260-TARGET-INFL-OPTN (ICRSUB)
+100500     MOVE W-ICR-270-TARGET-PCT (ICRSUB)
+100600       TO WS-ICR-270-TARGET-PCT (ICRSUB)
+100700     MOVE W-ICR-280-TARGET-LTM-MAX-YRS (ICRSUB)
+100800       TO WS-ICR-280-TARGET-LTM-MAX-YRS (ICRSUB)
+100900     .
+101000 SECTION-EXIT.
+101100     EXIT.
+ADIXIT
+ADIXIT 7510-MOVE-PRT-WS     SECTION.
+ADIXIT*************************************************************
+ADIXIT* MOVE SFS DATA TO INTERNAL TABLE WS-PRT-TABLE
+ADIXIT*************************************************************
+ADIXIT     MOVE W-ICR-320-STATE-CODE (PRTSUB)
+ADIXIT       TO WS-PRT-320-STATE-CODE (PRTSUB)
+ADIXIT     MOVE W-ICR-330-PRTSHIP (PRTSUB)
+ADIXIT       TO WS-PRT-330-PRTSHIP (PRTSUB)
+ADIXIT     .
+ADIXIT SECTION-EXIT.
+ADIXIT     EXIT.
+ADIXIT
+101300**************************************************************
+101400
+101500 COPY IMCPEDIT.
+101600 COPY IMCPTBL.
+101700 COPY IMCPDBIO.
+101800 COPY IMCPERRM.
+101900 COPY IMCEXITP.
+102000 COPY XMLPCOMM.
+102100 COPY IMCPSCR.
+102200 COPY IMCPCCR.
+102300
+102400*****************************************************************
+102500

@@ -1,0 +1,12 @@
+000010******************************************************************        
+000020*    IMCFOPRT - STANDARD BATCH REPORT PRINT01 FILE                        
+000030******************************************************************        
+000040                                                                          
+000050 FD  O-PRT-PRINT-FILE                                                     
+000060       BLOCK CONTAINS   0 RECORDS                                         
+000070       LABEL RECORDS  ARE OMITTED                                         
+COBOL2       RECORDING MODE  IS F                                               
+000090       RECORD CONTAINS    132    CHARACTERS.                              
+000100                                                                          
+000110 01  O-PRT-PRINT-REC.                                                     
+000120     05  FILLER                      PIC  X(132).                         
